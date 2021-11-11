@@ -12,7 +12,8 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-	use sp_std::prelude::*;
+	use pallet_users::User;
+use sp_std::prelude::*;
 	use codec::{Encode, Decode};
 
 	#[derive(Debug, Clone, PartialEq, Encode, Decode, Default, scale_info::TypeInfo)]
@@ -88,15 +89,27 @@ pub mod pallet {
 	pub type PostCount<T: Config> = StorageValue<_, u128>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn has_user_liked)]
-	pub(super) type HasLiked<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
+	#[pallet::getter(fn post_has_user_liked)]
+	//post_id -> u128 || user_who_liked -> T::AccountId
+	pub(super) type HasLikedPost<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn comment_has_user_liked)]
+	//post_id -> u128 || user_who_liked -> T::AccountId
+	pub(super) type HasLikedComment<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
 	#[pallet::storage]
 	pub type HashtagPosts<T: Config> = StorageMap<_, Twox64Concat ,u128, Vec<Post<T::AccountId, Comment<T::AccountId>>>>;
 
 	#[pallet::storage]
-	#[pallet::getter(fn liked_by)]
-	pub(super) type LikedBy<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, (Vec<u8>, T::AccountId), ValueQuery>;
+	#[pallet::getter(fn post_liked_by)]
+	//post_id -> u128 || user_who_liked -> T::AccountId
+	pub(super) type PostLikedBy<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, Vec<(Vec<u8>, T::AccountId)>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn comment_liked_by)]
+	//comment_id -> u128 || user_who_liked -> T::AccountId
+	pub(super) type CommentLikedBy<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, Vec<(Vec<u8>, T::AccountId)>, ValueQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events
@@ -115,7 +128,8 @@ pub mod pallet {
 		NoneValue,
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
-		AlreadyLiked
+		AlreadyLiked,
+		NotLikedYet,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -160,7 +174,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			post_id: u128,
 			comment: Vec<u8>,
-			author: T::AccountId,
+			post_author: T::AccountId,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let count = CommentsCount::<T>::get().unwrap_or(0);
@@ -171,7 +185,7 @@ pub mod pallet {
 				likes: 0,
 			});
 			let comment = CommentsById::<T>::get(count.clone());
-			Self::add_to_post_comments(&post_id, &comment, &author);
+			Self::add_to_post_comments(&post_id, &comment, &post_author);
 			CommentsCount::<T>::put(count + 1);
 			Ok(())
 		}
@@ -183,14 +197,29 @@ pub mod pallet {
 			author: T::AccountId,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			ensure!(!Self::has_user_liked(post_id.clone(), who.clone()), Error::<T>::AlreadyLiked);
-			let user = pallet_users::Pallet::<T>::get_user(&who);
-			LikedBy::<T>::insert(post_id.clone(), who.clone(), (user.handle, user.address));
+			ensure!(!Self::post_has_user_liked(post_id.clone(), who.clone()), Error::<T>::AlreadyLiked);
 			let mut post = PostByCount::<T>::get(post_id.clone()).unwrap_or(Default::default());
 			post.likes = post.likes + 1;
-			Self::update_user_posts_likes(&post_id, &author);
 			PostByCount::<T>::insert(post_id.clone(), post);
-			HasLiked::<T>::insert(post_id, who, true);
+			Self::update_user_posts_likes(&post_id, &author);
+			Self::post_liked(&who, &post_id, &author);
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
+		pub fn unlike_post(
+			origin: OriginFor<T>,
+			post_id: u128,
+			author: T::AccountId,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::post_has_user_liked(post_id.clone(), who.clone()), Error::<T>::NotLikedYet);
+			let user = pallet_users::Pallet::<T>::get_user(&who);
+			let mut post = PostByCount::<T>::get(post_id.clone()).unwrap_or(Default::default());
+			post.likes = post.likes - 1;
+			PostByCount::<T>::insert(post_id.clone(), post);
+			Self::update_user_posts_unlikes(&post_id, &author);
+			Self::post_unliked_by(&who, &post_id, &author);
 			Ok(())
 		}
 
@@ -222,6 +251,56 @@ pub mod pallet {
 	}
 
 	impl<T: Config> Pallet<T> {
+
+		fn post_liked(
+			user_liked: &T::AccountId, 
+			post_id: &u128, 
+			post_author: &T::AccountId,
+		) {
+			let user = pallet_users::Pallet::<T>::get_user(user_liked);
+			let mut current_likes = PostLikedBy::<T>::get(post_id, post_author);
+			current_likes.push((user.handle, user.address));
+			PostLikedBy::<T>::insert(post_id, post_author, current_likes);
+			HasLikedPost::<T>::insert(post_id, user_liked, true);
+		}
+
+		fn post_unliked_by(
+			user_liked: &T::AccountId, 
+			post_id: &u128, 
+			post_author: &T::AccountId,
+		) {
+			let user = pallet_users::Pallet::<T>::get_user(user_liked);
+			let mut current_likes = PostLikedBy::<T>::get(post_id, post_author);
+			let index = current_likes.iter().position(|value| value.1 == *user_liked).unwrap();
+			current_likes.remove(index);
+			PostLikedBy::<T>::insert(post_id, post_author, current_likes);
+			HasLikedPost::<T>::insert(post_id, user_liked, false);
+		}
+
+		fn comment_liked(
+			user_liked: &T::AccountId, 
+			comment_id: &u128,
+			comment_author: &T::AccountId,
+		) {
+			let user = pallet_users::Pallet::<T>::get_user(user_liked);
+			let mut current_likes = CommentLikedBy::<T>::get(comment_id, comment_author);
+			current_likes.push((user.handle, user.address));
+			CommentLikedBy::<T>::insert(comment_id, comment_author, current_likes);
+			HasLikedComment::<T>::insert(comment_id, user_liked, true);
+		}
+
+		fn comment_unliked_by(
+			user_unliked: &T::AccountId, 
+			comment_id: &u128,
+			comment_author: &T::AccountId,
+		) {
+			let user = pallet_users::Pallet::<T>::get_user(user_unliked);
+			let mut current_likes = CommentLikedBy::<T>::get(comment_id, comment_author);
+			let index = current_likes.iter().position(|value| value.1 == *comment_author).unwrap();
+			current_likes.remove(index);
+			CommentLikedBy::<T>::insert(comment_id, comment_author, current_likes);
+			HasLikedComment::<T>::insert(comment_id, user_unliked, false);
+		}
 		
 		fn remove_followers(
 			user_to_unfollow: &T::AccountId, 
@@ -284,19 +363,20 @@ pub mod pallet {
 		fn add_to_post_comments(
 			post_id: &u128, 
 			comment: &Comment<T::AccountId>, 
-			author: &T::AccountId
+			post_author: &T::AccountId
 		) {
 			let mut post = PostByCount::<T>::get(post_id).unwrap();
 			post.total_comments += 1;
 			post.comments.push(comment.clone());
 			PostByCount::<T>::insert(post_id, post);
-			let mut author_posts = Posts::<T>::get(author);
+			let mut author_posts = Posts::<T>::get(post_author);
 			let index = author_posts.iter().position(|value| value.id == *post_id).unwrap();
 			author_posts[index].total_comments += 1;
 			author_posts[index].comments.push(comment.clone());
-			let mut current_comments = CommentsByPost::<T>::get(post_id, author);
+			Posts::<T>::insert(post_author, author_posts);
+			let mut current_comments = CommentsByPost::<T>::get(post_id, post_author);
 			current_comments.push(comment.clone());
-			CommentsByPost::<T>::insert(post_id, author, current_comments);
+			CommentsByPost::<T>::insert(post_id, post_author, current_comments);
 		}
 
 		fn add_to_user_posts(
@@ -316,6 +396,16 @@ pub mod pallet {
 			let mut posts = Posts::<T>::get(author);
 			let index = posts.iter().position(|value| value.id == *id).unwrap();
 			posts[index].likes += 1;
+			Posts::<T>::insert(author, posts);
+		}
+
+		fn update_user_posts_unlikes(
+			id: &u128, 
+			author: &T::AccountId
+		) {
+			let mut posts = Posts::<T>::get(author);
+			let index = posts.iter().position(|value| value.id == *id).unwrap();
+			posts[index].likes -= 1;
 			Posts::<T>::insert(author, posts);
 		}
 
