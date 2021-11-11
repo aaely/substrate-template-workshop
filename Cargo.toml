@@ -1,7 +1,13 @@
 [workspace]
 members = [
     'node',
+    'pallets/cannabis',
+    'pallets/ocw',
+    'pallets/orders',
+    'pallets/peptides',
+    'pallets/social_media',
     'pallets/template',
+    'pallets/users',
     'runtime',
 ]
 [profile.release]

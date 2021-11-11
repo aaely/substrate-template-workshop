@@ -17,6 +17,36 @@ default-features = false
 path = '../pallets/template'
 version = '4.0.0-dev'
 
+[dependencies.pallet-ocw]
+default-features = false
+path = '../pallets/ocw'
+version = '0.0.1'
+
+[dependencies.pallet-peptides]
+default-features = false
+path = '../pallets/peptides'
+version = '0.0.1'
+
+[dependencies.pallet-cannabis]
+default-features = false
+path = '../pallets/cannabis'
+version = '0.0.1'
+
+[dependencies.pallet-orders]
+default-features = false
+path = '../pallets/orders'
+version = '0.0.1'
+
+[dependencies.pallet-social_media]
+default-features = false
+path = '../pallets/social_media'
+version = '0.0.1'
+
+[dependencies.pallet-users]
+default-features = false
+path = '../pallets/users'
+version = '0.0.1'
+
 [build-dependencies.substrate-wasm-builder]
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11-1'
@@ -177,6 +207,10 @@ git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11-1'
 version = '4.0.0-dev'
 
+[dependencies.log]
+default-features = false
+version = "0.4.14"
+
 [dependencies.sp-transaction-pool]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -209,8 +243,15 @@ std = [
     'frame-support/std',
     'frame-system-rpc-runtime-api/std',
     'frame-system/std',
+    'log/std',
     'pallet-aura/std',
     'pallet-balances/std',
+    'pallet-users/std',
+    'pallet-social_media/std',
+    'pallet-cannabis/std',
+    'pallet-peptides/std',
+    'pallet-ocw/std',
+    'pallet-orders/std',
     'pallet-grandpa/std',
     'pallet-randomness-collective-flip/std',
     'pallet-sudo/std',
