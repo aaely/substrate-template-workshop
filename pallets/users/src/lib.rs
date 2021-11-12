@@ -11,7 +11,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_std::prelude::*;
 	use codec::{Encode, Decode};
@@ -70,6 +70,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_handle_availability)]
 	pub type UserHandleAvailability<T> = StorageMap<_, Twox64Concat, u128, bool>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn profile_image_by_account)]
+	pub(super) type ProfileImageByAccount<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, (Vec<u8>, Vec<u8>), ValueQuery>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://docs.substrate.io/v3/runtime/events
@@ -184,13 +188,7 @@ pub mod pallet {
 
 		fn initiate_user(user: &User<T::AccountId>) {
 			UserByHandle::<T>::insert(user.handle_id, user);
-		}
-
-		pub fn get_profile_image_by_handle(
-			handle: &u128, 
-		) -> Vec<u8> {
-			let _user = Self::get_user_by_handle(handle);
-			_user.profile_image
+			ProfileImageByAccount::<T>::insert(user.address.clone(), (user.handle.clone(), user.profile_image.clone()));
 		}
 
 		pub fn check_duplicate_handle(id: &u128) -> bool {

@@ -10,11 +10,12 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
+
 	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 	use sp_std::prelude::*;
 	use codec::{Encode, Decode};
-	use sp_runtime::{offchain::storage::StorageValueRef, traits::StaticLookup};
+	use sp_runtime::traits::StaticLookup;
 
 	#[derive(Debug, Clone, PartialEq, Default, Encode, Decode, scale_info::TypeInfo)]
 	pub struct Order<AccountId> {
@@ -80,7 +81,7 @@ pub mod pallet {
 			date: Vec<u8>) -> DispatchResult {
 				let who = ensure_signed(origin.clone())?;
 				let total = Self::get_purchase_total(&products);
-			  	//pallet_balances::Pallet::<T>::transfer(origin, pallet_users::Pallet::<T>::get_owner().unwrap().into(), total.into());
+			  	pallet_balances::Pallet::<T>::transfer(origin, T::Lookup::unlookup(pallet_users::Pallet::<T>::get_owner().unwrap()), total.into());
 				let count = OrderCount::<T>::get().unwrap_or(0);
 				Orders::<T>::insert(count.clone(), Order {
 					id: count.clone(),

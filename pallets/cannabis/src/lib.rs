@@ -197,7 +197,7 @@ pub mod pallet {
 			id: u128, 
 			name: Vec<u8>, 
 			description: Vec<u8>) -> DispatchResult {
-				let who = ensure_signed(origin)?;
+				ensure_signed(origin)?;
 				//ensure!(Self::get_admin(who.clone()), Error::<T>::InsufficientPriv);
 				ensure!(!Self::check_duplicate_terpene(&id), Error::<T>::ItemAlreadyExists);
 				let count = TerpeneCount::<T>::get().unwrap_or(0);
@@ -219,7 +219,7 @@ pub mod pallet {
 			id: u128, 
 			name: Vec<u8>, 
 			description: Vec<u8>) -> DispatchResult {
-				let who = ensure_signed(origin)?;
+				ensure_signed(origin)?;
 				ensure!(!Self::check_duplicate_cannabinoid(&id), Error::<T>::ItemAlreadyExists);
 				let count = CannabinoidCount::<T>::get().unwrap_or(0);
 				Cannabinoids::<T>::insert(id.clone(), Cannabinoid {

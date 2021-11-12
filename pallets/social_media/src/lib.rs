@@ -12,8 +12,7 @@ mod benchmarking;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::{ensure_signed, pallet_prelude::*};
-	use pallet_users::User;
-use sp_std::prelude::*;
+	use sp_std::prelude::*;
 	use codec::{Encode, Decode};
 
 	#[derive(Debug, Clone, PartialEq, Encode, Decode, Default, scale_info::TypeInfo)]
@@ -34,8 +33,10 @@ use sp_std::prelude::*;
 	pub struct Comment<AccountId> {
 		author: AccountId,
 		post_id: u128,
+		comment_id: u128,
 		comment: Vec<u8>,
 		likes: u32,
+		date: Vec<u8>,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -95,7 +96,7 @@ use sp_std::prelude::*;
 
 	#[pallet::storage]
 	#[pallet::getter(fn comment_has_user_liked)]
-	//post_id -> u128 || user_who_liked -> T::AccountId
+	//comment_id -> u128 || user_who_liked -> T::AccountId
 	pub(super) type HasLikedComment<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
 	#[pallet::storage]
@@ -175,14 +176,17 @@ use sp_std::prelude::*;
 			post_id: u128,
 			comment: Vec<u8>,
 			post_author: T::AccountId,
+			date: Vec<u8>,
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			let count = CommentsCount::<T>::get().unwrap_or(0);
 			CommentsById::<T>::insert(count.clone(), Comment {
 				author: who,
 				post_id,
+				comment_id: count.clone(),
 				comment,
 				likes: 0,
+				date,
 			});
 			let comment = CommentsById::<T>::get(count.clone());
 			Self::add_to_post_comments(&post_id, &comment, &post_author);
@@ -274,7 +278,7 @@ use sp_std::prelude::*;
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::remove_followers(&user_to_unfollow, &user_to_unfollow_handle_id, &who);
-			Self::remove_following(&user_to_unfollow, &user_to_unfollow_handle_id, &who);
+			Self::remove_following(&user_to_unfollow, &user_handle_id, &who);
 			Ok(())
 		}
 	}
@@ -298,7 +302,6 @@ use sp_std::prelude::*;
 			post_id: &u128, 
 			post_author: &T::AccountId,
 		) {
-			let user = pallet_users::Pallet::<T>::get_user(user_liked);
 			let mut current_likes = PostLikedBy::<T>::get(post_id, post_author);
 			let index = current_likes.iter().position(|value| value.1 == *user_liked).unwrap();
 			current_likes.remove(index);
@@ -323,7 +326,6 @@ use sp_std::prelude::*;
 			comment_id: &u128,
 			comment_author: &T::AccountId,
 		) {
-			let user = pallet_users::Pallet::<T>::get_user(user_unliked);
 			let mut current_likes = CommentLikedBy::<T>::get(comment_id, comment_author);
 			let index = current_likes.iter().position(|value| value.1 == *comment_author).unwrap();
 			current_likes.remove(index);
