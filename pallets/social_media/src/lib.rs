@@ -11,7 +11,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use frame_system::{ensure_signed, pallet_prelude::*};
 	use pallet_users::User;
 use sp_std::prelude::*;
 	use codec::{Encode, Decode};
@@ -214,12 +214,41 @@ use sp_std::prelude::*;
 		) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Self::post_has_user_liked(post_id.clone(), who.clone()), Error::<T>::NotLikedYet);
-			let user = pallet_users::Pallet::<T>::get_user(&who);
 			let mut post = PostByCount::<T>::get(post_id.clone()).unwrap_or(Default::default());
-			post.likes = post.likes - 1;
+			post.likes -= 1;
 			PostByCount::<T>::insert(post_id.clone(), post);
 			Self::update_user_posts_unlikes(&post_id, &author);
 			Self::post_unliked_by(&who, &post_id, &author);
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
+		pub fn like_comment(
+			origin: OriginFor<T>,
+			comment_id: u128,
+			comment_author: T::AccountId,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(!Self::comment_has_user_liked(comment_id.clone(), who.clone()), Error::<T>::AlreadyLiked);
+			Self::comment_liked(&who, &comment_id, &comment_author);
+			let mut comment = CommentsById::<T>::get(comment_id);
+			comment.likes += 1;
+			CommentsById::<T>::insert(comment_id, comment);
+			Ok(())
+		}
+
+		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
+		pub fn unlike_comment(
+			origin: OriginFor<T>,
+			comment_id: u128,
+			comment_author: T::AccountId,
+		) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Self::comment_has_user_liked(comment_id.clone(), who.clone()), Error::<T>::NotLikedYet);
+			Self::comment_unliked_by(&who, &comment_id, &comment_author);
+			let mut comment = CommentsById::<T>::get(comment_id);
+			comment.likes -= 1;
+			CommentsById::<T>::insert(comment_id, comment);
 			Ok(())
 		}
 
@@ -290,7 +319,7 @@ use sp_std::prelude::*;
 		}
 
 		fn comment_unliked_by(
-			user_unliked: &T::AccountId, 
+			user_unliked: &T::AccountId,
 			comment_id: &u128,
 			comment_author: &T::AccountId,
 		) {
