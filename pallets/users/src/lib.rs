@@ -29,6 +29,7 @@ pub mod pallet {
 		website: Vec<u8>,
 		profile_image: Vec<u8>,
 		pub total_orders: u32,
+		pub total_posts: u32,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -133,6 +134,7 @@ pub mod pallet {
 					website,
 					profile_image,
 					total_orders: 0,
+					total_posts: 0,
 				});
 				UserHandleAvailability::<T>::insert(handle_id, true);
 				let new_user = Users::<T>::get(who.clone());
@@ -153,7 +155,8 @@ pub mod pallet {
 			website: Vec<u8>,
 			handle_id: u128,
 			profile_image: Vec<u8>,
-			total_orders: u32) -> DispatchResult {
+			total_orders: u32,
+			total_posts: u32,) -> DispatchResult {
 				let who = ensure_signed(origin)?;
 				ensure!(!Self::check_is_user(&who), Error::<T>::InsufficientPriv);				
 				Users::<T>::insert(who.clone(), User {
@@ -168,6 +171,7 @@ pub mod pallet {
 					website,
 					profile_image,
 					total_orders,
+					total_posts,
 				});
 				UserHandleAvailability::<T>::insert(handle_id, true);
 				let edited_user = Users::<T>::get(who.clone());
@@ -205,6 +209,7 @@ pub mod pallet {
 		}
 
 		pub fn insert_user(id: &T::AccountId, user: &User<T::AccountId>) {
+			UserByHandle::<T>::insert(user.handle_id, user);
 			Users::<T>::insert(id, user);
 		}
 
