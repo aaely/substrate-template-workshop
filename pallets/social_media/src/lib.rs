@@ -460,6 +460,7 @@ pub mod pallet {
 			let mut posts = Posts::<T>::get(author);
 			let index = posts.iter().position(|value| value.id == *id).unwrap();
 			posts[index].likes += 1;
+			PostByCount::<T>::insert(id, posts[index].clone());
 			Posts::<T>::insert(author, posts);
 		}
 
@@ -470,6 +471,7 @@ pub mod pallet {
 			let mut posts = Posts::<T>::get(author);
 			let index = posts.iter().position(|value| value.id == *id).unwrap();
 			posts[index].likes -= 1;
+			PostByCount::<T>::insert(id, posts[index].clone());
 			Posts::<T>::insert(author, posts);
 		}
 

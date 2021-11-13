@@ -78,10 +78,11 @@ pub mod pallet {
 		pub fn purchase(
 			origin: OriginFor<T>, 
 			products: Vec<(Vec<u8>, u32, u32)>,
+			owner: T::AccountId,
 			date: Vec<u8>) -> DispatchResult {
 				let who = ensure_signed(origin.clone())?;
 				let total = Self::get_purchase_total(&products);
-			  	pallet_balances::Pallet::<T>::transfer(origin, T::Lookup::unlookup(pallet_users::Pallet::<T>::get_owner().unwrap()), total.into());
+			  	pallet_balances::Pallet::<T>::transfer(origin, T::Lookup::unlookup(owner), total.into());
 				let count = OrderCount::<T>::get().unwrap_or(0);
 				Orders::<T>::insert(count.clone(), Order {
 					id: count.clone(),
