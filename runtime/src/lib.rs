@@ -43,6 +43,7 @@ pub use sp_runtime::{Perbill, Permill};
 
 /// Import the template pallet.
 pub use pallet_template;
+//pub use pallet_asset_tx_payment;
 pub use pallet_peptides;
 pub use pallet_ocw;
 pub use pallet_cannabis;
@@ -320,6 +321,11 @@ impl pallet_ocw::Config for Runtime {
 	type UnsignedInterval = UnsignedInterval;
 	type UnsignedPriority = UnsignedPriority;
 }
+
+/*impl pallet_asset_tx_payment::Config for Runtime {
+	type Fungibles = Fungibles;
+	type OnChargeAssetTransaction = pallet_transaction_payment::ChargeTransactionPayment<Self>;
+}*/
 
 impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
 where

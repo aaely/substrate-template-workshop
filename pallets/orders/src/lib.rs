@@ -11,7 +11,7 @@ mod benchmarking;
 #[frame_support::pallet]
 pub mod pallet {
 
-	use frame_support::{dispatch::DispatchResult, pallet_prelude::*};
+	use frame_support::{pallet_prelude::*};
 	use frame_system::pallet_prelude::*;
 	use sp_std::prelude::*;
 	use codec::{Encode, Decode};
@@ -55,7 +55,7 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
+		TransferSuccess(T::AccountId),
 	}
 
 	// Errors inform users that something went wrong.
@@ -82,7 +82,7 @@ pub mod pallet {
 			date: Vec<u8>) -> DispatchResult {
 				let who = ensure_signed(origin.clone())?;
 				let total = Self::get_purchase_total(&products);
-			  	pallet_balances::Pallet::<T>::transfer(origin, T::Lookup::unlookup(owner), total.into());
+			  	let transfer = pallet_balances::Pallet::<T>::transfer(origin, T::Lookup::unlookup(owner), total.into());
 				let count = OrderCount::<T>::get().unwrap_or(0);
 				Orders::<T>::insert(count.clone(), Order {
 					id: count.clone(),

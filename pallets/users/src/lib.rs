@@ -23,6 +23,7 @@ pub mod pallet {
 		lname: Vec<u8>,
 		phone: Vec<u8>,
 		email: Vec<u8>,
+		email_id: u128,
 		pub handle: Vec<u8>,
 		handle_id: u128,
 		bio: Vec<u8>,
@@ -70,7 +71,12 @@ pub mod pallet {
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_handle_availability)]
-	pub type UserHandleAvailability<T> = StorageMap<_, Twox64Concat, u128, bool>;
+	pub(super) type UserHandleAvailability<T> = StorageMap<_, Twox64Concat, u128, bool, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_user_email_availability)]
+	pub(super) type UserEmailAvailability<T> = StorageMap<_, Twox64Concat, u128, bool, ValueQuery>;
+
 
 	#[pallet::storage]
 	#[pallet::getter(fn profile_image_by_account)]
@@ -96,6 +102,7 @@ pub mod pallet {
 		UserAlreadyExists,
 		InsufficientPriv,
 		HandleAlreadyExists,
+		EmailAlreadyInUse,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -112,6 +119,7 @@ pub mod pallet {
 			lname: Vec<u8>, 
 			phone: Vec<u8>, 
 			email: Vec<u8>,
+			email_id: u128,
 			handle: Vec<u8>,
 			handle_id: u128,
 			bio: Vec<u8>,
@@ -119,7 +127,8 @@ pub mod pallet {
 			profile_image: Vec<u8>) -> DispatchResult {
 				let who = ensure_signed(origin)?;
 				ensure!(!Self::check_duplicate_user(&who), Error::<T>::UserAlreadyExists);
-				ensure!(!Self::get_user_handle_availability(&handle_id).unwrap_or(Default::default()), Error::<T>::HandleAlreadyExists);
+				ensure!(!Self::get_user_handle_availability(&handle_id), Error::<T>::HandleAlreadyExists);
+				ensure!(!Self::get_user_email_availability(&email_id), Error::<T>::EmailAlreadyInUse);
 				let count = UserCount::<T>::get().unwrap_or(0);
 				Self::register_user(&who);
 				Users::<T>::insert(who.clone(), User {
@@ -128,6 +137,7 @@ pub mod pallet {
 					lname,
 					phone,
 					email,
+					email_id,
 					handle,
 					handle_id,
 					bio,
@@ -137,6 +147,7 @@ pub mod pallet {
 					total_posts: 0,
 				});
 				UserHandleAvailability::<T>::insert(handle_id, true);
+				UserEmailAvailability::<T>::insert(email_id, true);
 				let new_user = Users::<T>::get(who.clone());
 				Self::initiate_user(&new_user);
 				UserCount::<T>::put(count + 1);
@@ -150,6 +161,7 @@ pub mod pallet {
 			lname: Vec<u8>, 
 			phone: Vec<u8>, 
 			email: Vec<u8>,
+			email_id: u128,
 			handle: Vec<u8>,
 			bio: Vec<u8>,
 			website: Vec<u8>,
@@ -158,13 +170,19 @@ pub mod pallet {
 			total_orders: u32,
 			total_posts: u32,) -> DispatchResult {
 				let who = ensure_signed(origin)?;
-				ensure!(!Self::check_is_user(&who), Error::<T>::InsufficientPriv);				
+				ensure!(!Self::check_is_user(&who), Error::<T>::InsufficientPriv);
+				ensure!(!Self::get_user_handle_availability(&handle_id), Error::<T>::HandleAlreadyExists);
+				ensure!(!Self::get_user_email_availability(&email_id), Error::<T>::EmailAlreadyInUse);
+				let _user = Self::get_user(&who);
+				UserHandleAvailability::<T>::insert(_user.handle_id.clone(), false);
+				UserEmailAvailability::<T>::insert(_user.email_id.clone(), false);				
 				Users::<T>::insert(who.clone(), User {
 					address: who.clone(),
 					fname,
 					lname,
 					phone,
 					email,
+					email_id,
 					handle,
 					handle_id,
 					bio,
@@ -174,6 +192,7 @@ pub mod pallet {
 					total_posts,
 				});
 				UserHandleAvailability::<T>::insert(handle_id, true);
+				UserEmailAvailability::<T>::insert(email_id, true);
 				let edited_user = Users::<T>::get(who.clone());
 				Self::initiate_user(&edited_user);
 				Ok(())
@@ -196,7 +215,7 @@ pub mod pallet {
 		}
 
 		pub fn check_duplicate_handle(id: &u128) -> bool {
-			UserHandleAvailability::<T>::get(id).unwrap_or(false)
+			UserHandleAvailability::<T>::get(id)
 		}
 
 		pub fn check_is_user(id: &T::AccountId) -> bool {

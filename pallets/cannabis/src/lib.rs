@@ -149,7 +149,7 @@ pub mod pallet {
 			name: Vec<u8>, 
 			price: u32, 
 			category: CannabisCategory, 
-			inventory: u32, 
+			inventory: u32,
 			image_hash: Vec<u8>, 
 			cannabinoids: Vec<(u128, Vec<u8>, u32)>, 
 			terpenes: Vec<(u128, Vec<u8>, u32)>) -> DispatchResult {

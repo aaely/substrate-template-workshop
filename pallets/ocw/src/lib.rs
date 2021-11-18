@@ -63,7 +63,7 @@ use sp_runtime::{
 	transaction_validity::{InvalidTransaction, TransactionValidity, ValidTransaction},
 	RuntimeDebug,
 };
-use sp_std::vec::Vec;
+use sp_std::prelude::*;
 
 /// Defines application identifier for crypto keys of this module.
 ///
@@ -183,7 +183,7 @@ pub mod pallet {
 			// Here we call a helper function to calculate current average price.
 			// This function reads storage entries of the current state.
 			let average: Option<u32> = Self::average_price();
-			log::debug!("Current price: {:?}", average);
+			log::debug!("Current average price: {:?}", average);
 
 			// For this example we are going to send both signed and unsigned transactions
 			// depending on the block number.
@@ -222,11 +222,11 @@ pub mod pallet {
 		/// This example is not focused on correctness of the oracle itself, but rather its
 		/// purpose is to showcase offchain worker capabilities.
 		#[pallet::weight(0)]
-		pub fn submit_price(origin: OriginFor<T>, price: u32) -> DispatchResultWithPostInfo {
+		pub fn submit_price(origin: OriginFor<T>, prices: Vec<(u32, PriceType)>) -> DispatchResultWithPostInfo {
 			// Retrieve sender of the transaction.
 			let who = ensure_signed(origin)?;
 			// Add the price to the on-chain list.
-			Self::add_price(who, price);
+			Self::add_price(who, prices);
 			Ok(().into())
 		}
 
@@ -250,12 +250,12 @@ pub mod pallet {
 		pub fn submit_price_unsigned(
 			origin: OriginFor<T>,
 			_block_number: T::BlockNumber,
-			price: u32,
+			prices: Vec<(u32, PriceType)>,
 		) -> DispatchResultWithPostInfo {
 			// This ensures that the function can only be called via unsigned transaction.
 			ensure_none(origin)?;
 			// Add the price to the on-chain list, but mark it as coming from an empty address.
-			Self::add_price(Default::default(), price);
+			Self::add_price(Default::default(), prices);
 			// now increment the block number at which we expect next unsigned transaction.
 			let current_block = <system::Pallet<T>>::block_number();
 			<NextUnsignedAt<T>>::put(current_block + T::UnsignedInterval::get());
@@ -270,8 +270,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			// This ensures that the function can only be called via unsigned transaction.
 			ensure_none(origin)?;
+			let p = vec![(price_payload.price, PriceType::BTC)];
 			// Add the price to the on-chain list, but mark it as coming from an empty address.
-			Self::add_price(Default::default(), price_payload.price);
+			Self::add_price(Default::default(), p);
 			// now increment the block number at which we expect next unsigned transaction.
 			let current_block = <system::Pallet<T>>::block_number();
 			<NextUnsignedAt<T>>::put(current_block + T::UnsignedInterval::get());
@@ -310,8 +311,8 @@ pub mod pallet {
 					return InvalidTransaction::BadProof.into()
 				}
 				Self::validate_transaction_parameters(&payload.block_number, &payload.price)
-			} else if let Call::submit_price_unsigned { block_number, price: new_price } = call {
-				Self::validate_transaction_parameters(block_number, new_price)
+			} else if let Call::submit_price_unsigned { block_number, prices: new_price } = call {
+				Self::validate_transaction_parameters(block_number, &new_price[0].0)
 			} else {
 				InvalidTransaction::Call.into()
 			}
@@ -324,6 +325,22 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn prices)]
 	pub(super) type Prices<T: Config> = StorageValue<_, Vec<u32>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn btc)]
+	pub(super) type BTCPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn eth)]
+	pub(super) type ETHPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn dot)]
+	pub(super) type DOTPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn atom)]
+	pub(super) type ATOMPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Defines the block when next unsigned transaction will be accepted.
 	///
@@ -342,6 +359,14 @@ pub struct PricePayload<Public, BlockNumber> {
 	block_number: BlockNumber,
 	price: u32,
 	public: Public,
+}
+
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug, scale_info::TypeInfo)]
+pub enum PriceType {
+	DOT,
+	ETH,
+	BTC,
+	ATOM,
 }
 
 impl<T: SigningTypes> SignedPayload<T> for PricePayload<T::Public, T::BlockNumber> {
@@ -440,22 +465,22 @@ impl<T: Config> Pallet<T> {
 		}
 		// Make an external HTTP request to fetch the current price.
 		// Note this call will block until response is received.
-		let price = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
-
+		let prices = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
 		// Using `send_signed_transaction` associated type we create and submit a transaction
 		// representing the call, we've just created.
 		// Submit signed will return a vector of results for all accounts that were found in the
 		// local keystore with expected `KEY_TYPE`.
 		let results = signer.send_signed_transaction(|_account| {
+			let ps = prices.clone();
 			// Received price is wrapped into a call to `submit_price` public function of this
 			// pallet. This means that the transaction, when executed, will simply call that
 			// function passing `price` as an argument.
-			Call::submit_price { price }
+			Call::submit_price { prices: ps }
 		});
 
 		for (acc, res) in &results {
 			match res {
-				Ok(()) => log::info!("[{:?}] Submitted price of {} cents", acc.id, price),
+				Ok(()) => log::info!("[{:?}] Submitted price of {} cents", acc.id, prices[0].0),
 				Err(e) => log::error!("[{:?}] Failed to submit transaction: {:?}", acc.id, e),
 			}
 		}
@@ -474,12 +499,12 @@ impl<T: Config> Pallet<T> {
 
 		// Make an external HTTP request to fetch the current price.
 		// Note this call will block until response is received.
-		let price = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
+		let prices = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
 
 		// Received price is wrapped into a call to `submit_price_unsigned` public function of this
 		// pallet. This means that the transaction, when executed, will simply call that function
 		// passing `price` as an argument.
-		let call = Call::submit_price_unsigned { block_number, price };
+		let call = Call::submit_price_unsigned { block_number, prices };
 
 		// Now let's create a transaction out of this call and submit it to the pool.
 		// Here we showcase two ways to send an unsigned transaction / unsigned payload (raw)
@@ -513,7 +538,7 @@ impl<T: Config> Pallet<T> {
 		// -- Sign using any account
 		let (_, result) = Signer::<T, T::AuthorityId>::any_account()
 			.send_unsigned_transaction(
-				|account| PricePayload { price, block_number, public: account.public.clone() },
+				|account| PricePayload { price: price[0].0, block_number, public: account.public.clone() },
 				|payload, signature| Call::submit_price_unsigned_with_signed_payload {
 					price_payload: payload,
 					signature,
@@ -538,12 +563,12 @@ impl<T: Config> Pallet<T> {
 
 		// Make an external HTTP request to fetch the current price.
 		// Note this call will block until response is received.
-		let price = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
+		let prices = Self::fetch_price().map_err(|_| "Failed to fetch price")?;
 
 		// -- Sign using all accounts
 		let transaction_results = Signer::<T, T::AuthorityId>::all_accounts()
 			.send_unsigned_transaction(
-				|account| PricePayload { price, block_number, public: account.public.clone() },
+				|account| PricePayload { price: prices[0].0, block_number, public: account.public.clone() },
 				|payload, signature| Call::submit_price_unsigned_with_signed_payload {
 					price_payload: payload,
 					signature,
@@ -559,7 +584,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Fetch current price and return the result in cents.
-	fn fetch_price() -> Result<u32, http::Error> {
+	fn fetch_price() -> Result<Vec<(u32, PriceType)>, http::Error> {
 		// We want to keep the offchain worker execution time reasonable, so we set a hard-coded
 		// deadline to 2s to complete the external call.
 		// You can also wait idefinitely for the response, however you may still get a timeout
@@ -570,13 +595,21 @@ impl<T: Config> Pallet<T> {
 		// you can find in `sp_io`. The API is trying to be similar to `reqwest`, but
 		// since we are running in a custom WASM execution environment we can't simply
 		// import the library here.
-		let request =
+		let request_btc =
 			http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD");
-
+		let request_eth =
+			http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD");
+		let request_dot =
+			http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=DOT&tsyms=USD");
+		let request_atom =
+			http::Request::get("https://min-api.cryptocompare.com/data/price?fsym=ATOM&tsyms=USD");
 		// We set the deadline for sending of the request, note that awaiting response can
 		// have a separate deadline. Next we send the request, before that it's also possible
 		// to alter request headers or stream body content in case of non-GET requests.
-		let pending = request.deadline(deadline).send().map_err(|_| http::Error::IoError)?;
+		let pending_btc = request_btc.deadline(deadline).send().map_err(|_| http::Error::IoError)?;
+		let pending_eth = request_eth.deadline(deadline).send().map_err(|_| http::Error::IoError)?;
+		let pending_dot = request_dot.deadline(deadline).send().map_err(|_| http::Error::IoError)?;
+		let pending_atom = request_atom.deadline(deadline).send().map_err(|_| http::Error::IoError)?;
 
 		// The request is already being processed by the host, we are free to do anything
 		// else in the worker (we can send multiple concurrent requests too).
@@ -584,37 +617,91 @@ impl<T: Config> Pallet<T> {
 		// so we can block current thread and wait for it to finish.
 		// Note that since the request is being driven by the host, we don't have to wait
 		// for the request to have it complete, we will just not read the response.
-		let response = pending.try_wait(deadline).map_err(|_| http::Error::DeadlineReached)??;
+		let response_btc = pending_btc.try_wait(deadline).map_err(|_| http::Error::DeadlineReached)??;
+		let response_eth = pending_eth.try_wait(deadline).map_err(|_| http::Error::DeadlineReached)??;
+		let response_dot = pending_dot.try_wait(deadline).map_err(|_| http::Error::DeadlineReached)??;
+		let response_atom = pending_atom.try_wait(deadline).map_err(|_| http::Error::DeadlineReached)??;
 		// Let's check the status code before we proceed to reading the response.
-		if response.code != 200 {
-			log::warn!("Unexpected status code: {}", response.code);
-			return Err(http::Error::Unknown)
-		}
+		if response_btc.code != 200 {
+			log::warn!("Unexpected status code: {}", response_btc.code);
+			return Err(http::Error::Unknown);
+		}	
+		if response_eth.code != 200 {
+			log::warn!("Unexpected status code: {}", response_eth.code);
+			return Err(http::Error::Unknown);
+		}	
+		if response_dot.code != 200 {
+			log::warn!("Unexpected status code: {}", response_dot.code);
+			return Err(http::Error::Unknown);
+		}	
+		if response_atom.code != 200 {
+			log::warn!("Unexpected status code: {}", response_atom.code);
+			return Err(http::Error::Unknown);
+		}	
 
 		// Next we want to fully read the response body and collect it to a vector of bytes.
 		// Note that the return object allows you to read the body in chunks as well
 		// with a way to control the deadline.
-		let body = response.body().collect::<Vec<u8>>();
+		let body_btc = response_btc.body().collect::<Vec<u8>>();
+		let body_eth = response_eth.body().collect::<Vec<u8>>();
+		let body_dot = response_dot.body().collect::<Vec<u8>>();
+		let body_atom = response_atom.body().collect::<Vec<u8>>();
 
 		// Create a str slice from the body.
-		let body_str = sp_std::str::from_utf8(&body).map_err(|_| {
+		let body_str_btc = sp_std::str::from_utf8(&body_btc).map_err(|_| {
+			log::warn!("No UTF8 body");
+			http::Error::Unknown
+		})?;
+		let body_str_eth = sp_std::str::from_utf8(&body_eth).map_err(|_| {
+			log::warn!("No UTF8 body");
+			http::Error::Unknown
+		})?;
+		let body_str_dot = sp_std::str::from_utf8(&body_dot).map_err(|_| {
+			log::warn!("No UTF8 body");
+			http::Error::Unknown
+		})?;
+		let body_str_atom = sp_std::str::from_utf8(&body_atom).map_err(|_| {
 			log::warn!("No UTF8 body");
 			http::Error::Unknown
 		})?;
 
-		log::info!("fetch_price: {}", body_str);
+		log::info!("BTC_price: {}", body_str_btc);
+		log::info!("ETH_price: {}", body_str_eth);
+		log::info!("DOT_price: {}", body_str_dot);
+		log::info!("ATOM_price: {}", body_str_atom);
 
-		let price = match Self::parse_price(body_str) {
+		let price_btc = match Self::parse_price(body_str_btc) {
 			Some(price) => Ok(price),
 			None => {
-				log::warn!("Unable to extract price from the response: {:?}", body_str);
+				log::warn!("Unable to extract price from the response: {:?}", body_str_btc);
+				Err(http::Error::Unknown)
+			},
+		}?;
+		let price_eth = match Self::parse_price(body_str_eth) {
+			Some(price) => Ok(price),
+			None => {
+				log::warn!("Unable to extract price from the response: {:?}", body_str_eth);
+				Err(http::Error::Unknown)
+			},
+		}?;
+		let price_dot = match Self::parse_price(body_str_dot) {
+			Some(price) => Ok(price),
+			None => {
+				log::warn!("Unable to extract price from the response: {:?}", body_str_dot);
+				Err(http::Error::Unknown)
+			},
+		}?;
+		let price_atom = match Self::parse_price(body_str_atom) {
+			Some(price) => Ok(price),
+			None => {
+				log::warn!("Unable to extract price from the response: {:?}", body_str_atom);
 				Err(http::Error::Unknown)
 			},
 		}?;
 
-		log::info!("Got price: {} cents", price);
-
-		Ok(price)
+		log::info!("Got BTCprice: {}, ETHprice: {}, DOTprice: {}, ATOMprice: {}", price_btc, price_eth, price_dot, price_atom);
+		let prices: Vec<(u32, PriceType)> = vec![(price_btc, PriceType::BTC), (price_eth, PriceType::ETH), (price_dot, PriceType::DOT), (price_atom, PriceType::ATOM)];
+		Ok(prices)
 	}
 
 	/// Parse the price from the given JSON string using `lite-json`.
@@ -638,23 +725,32 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Add new price to the list.
-	fn add_price(who: T::AccountId, price: u32) {
-		log::info!("Adding to the average: {}", price);
-		<Prices<T>>::mutate(|prices| {
-			const MAX_LEN: usize = 64;
+	fn add_price(who: T::AccountId, prices: Vec<(u32, PriceType)>) {
+		for price in prices.clone() {
+			match price.1 {
+				PriceType::BTC => {
+					<Prices<T>>::mutate(|_prices| {
+						const MAX_LEN: usize = 64;
 
-			if prices.len() < MAX_LEN {
-				prices.push(price);
-			} else {
-				prices[price as usize % MAX_LEN] = price;
+						if _prices.len() < MAX_LEN {
+							_prices.push(price.0);
+						} else {
+							_prices[prices[0].0 as usize % MAX_LEN] = price.0;
+						}
+					});
+					<BTCPrice<T>>::put(price.0);
+				},
+				PriceType::ETH => <ETHPrice<T>>::put(price.0),
+				PriceType::DOT => <DOTPrice<T>>::put(price.0),
+				PriceType::ATOM => <ATOMPrice<T>>::put(price.0),
 			}
-		});
+		}
 
 		let average = Self::average_price()
 			.expect("The average is not empty, because it was just mutated; qed");
 		log::info!("Current average price is: {}", average);
 		// here we are raising the NewPrice event
-		Self::deposit_event(Event::NewPrice(price, who));
+		Self::deposit_event(Event::NewPrice(prices[0].0, who));
 	}
 
 	/// Calculate current average price.
