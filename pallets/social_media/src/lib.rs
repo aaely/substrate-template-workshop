@@ -120,9 +120,9 @@ pub mod pallet {
 		NewComment(Comment<T::AccountId>),
 		NewPost(Post<T::AccountId>),
 		PostLiked(u128),
-		CommentLiked(u128),
+		CommentLiked(u128, u128),
 		PostUnliked(u128),
-		CommentUnliked(u128),
+		CommentUnliked(u128, u128),
 	}
 
 	// Errors inform users that something went wrong.
@@ -250,7 +250,7 @@ pub mod pallet {
 			PostById::<T>::insert(post_id.clone(), post);
 			Self::update_user_posts_unlikes(&post_id, &author);
 			Self::post_unliked_by(&who, &post_id);
-			Self::deposit_event(Event::<T>::PostLiked(post_id));
+			Self::deposit_event(Event::<T>::PostUnliked(post_id));
 			Ok(())
 		}
 
@@ -264,8 +264,8 @@ pub mod pallet {
 			Self::comment_liked(&who, &comment_id);
 			let mut comment = CommentById::<T>::get(comment_id);
 			comment.likes += 1;
-			CommentById::<T>::insert(comment_id, comment);
-			Self::deposit_event(Event::<T>::CommentLiked(comment_id));
+			CommentById::<T>::insert(comment_id, comment.clone());
+			Self::deposit_event(Event::<T>::CommentLiked(comment.post_id.clone(), comment_id));
 			Ok(())
 		}
 
@@ -279,8 +279,8 @@ pub mod pallet {
 			Self::comment_unliked_by(&who, &comment_id);
 			let mut comment = CommentById::<T>::get(comment_id);
 			comment.likes -= 1;
-			CommentById::<T>::insert(comment_id, comment);
-			Self::deposit_event(Event::<T>::CommentUnliked(comment_id));
+			CommentById::<T>::insert(comment_id, comment.clone());
+			Self::deposit_event(Event::<T>::CommentUnliked(comment.post_id.clone(), comment_id));
 			Ok(())
 		}
 
