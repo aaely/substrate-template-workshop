@@ -13,6 +13,11 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use futures::channel::mpsc::Sender;
+use sc_consensus_manual_seal::{
+    rpc::{ManualSeal, ManualSealApi},
+	EngineCommand,
+};
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -45,6 +50,10 @@ where
 
 	io.extend_with(TransactionPaymentApi::to_delegate(TransactionPayment::new(client.clone())));
 
+	io.extend_with(social_media_query::AnalyticalQueryRPC::to_delegate(
+		social_media_query::AnalyticalQueryRPC::new(client),
+	));
+	
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

@@ -1,0 +1,15 @@
+[package]
+name = 'social-media-query-runtime-api'
+version = '0.0.1'
+
+[dependencies]
+sp-api = { tag = 'monthly-2021-11-1', git = 'https://github.com/paritytech/substrate.git', version = '4.0.0-dev', default-features = false }
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[features]
+default = ["std"]
+std = [
+	"sp-api/std",
+]

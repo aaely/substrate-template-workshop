@@ -10,7 +10,7 @@ mod benchmarking;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{IterableStorageMap, pallet_prelude::*};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use sp_std::prelude::*;
 	use codec::{Encode, Decode};
@@ -532,6 +532,34 @@ pub mod pallet {
 			} else {
 				false
 			}
+		}
+
+		fn get_three_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
+			let accounts: Vec<(Vec<u8>, u128)>;
+			let _count = pallet_users::Pallet::<T>::get_user_count().unwrap_or(0);
+			let mut i: u128 = 0;
+			while accounts.len() < 3 && i <= _count {
+				let _user = <pallet_users::Pallet<T> as Trait>::UserByCounterByCount::get(i);
+				if _user.handle.starts_with(name) {
+					accounts.push(_user);
+				}
+				i += 1;
+			}
+			Ok(accounts)
+		}
+	
+		fn get_fifty_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
+			let accounts: Vec<(Vec<u8>, u128)>;
+			let _count = pallet_users::Pallet::<T>::get_user_count().unwrap_or(0);
+			let mut i: u128 = 0;
+			while accounts.len() < 50 && i <= _count { 
+				let _user = <pallet_users::Pallet<T> as Trait>::UserByCount::get(i);
+				if _user.handle.starts_with(name) {
+					accounts.push(_user);
+				}
+				i += 1;
+			}
+			Ok(accounts)
 		}
 	}
 }

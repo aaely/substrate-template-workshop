@@ -47,7 +47,8 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	// https://docs.substrate.io/v3/runtime/storage
 	#[pallet::storage]
-	pub type UserCount<T> = StorageValue<_, u32>;
+	#[pallet::getter(fn get_user_count)]
+	pub(super) type UserCount<T> = StorageValue<_, u128, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_admin)]
@@ -60,6 +61,10 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn get_user)]
 	pub(super) type Users<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, User<T::AccountId>, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_user_by_count)]
+	pub(super) type UserByCount<T: Config> = StorageMap<_, Twox64Concat, u128, User<T::AccountId>, ValueQuery>;
 
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_by_handle)]

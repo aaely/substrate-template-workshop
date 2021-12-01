@@ -453,6 +453,15 @@ impl_runtime_apis! {
 		}
 	}
 
+	impl social_media_query::AnalyticalQueryRPC<Block> for Runtime {
+		fn get_three_accts() -> Vec<(Vec<u8>, u128)> {
+			Queries::get_three_accts()
+		}
+		fn get_fifty_accts() -> Vec<(Vec<u8>, u128)> {
+			Queries::get_fifty_accts()
+		}
+	}
+
 	impl sp_block_builder::BlockBuilder<Block> for Runtime {
 		fn apply_extrinsic(extrinsic: <Block as BlockT>::Extrinsic) -> ApplyExtrinsicResult {
 			Executive::apply_extrinsic(extrinsic)
