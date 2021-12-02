@@ -27,10 +27,6 @@ version = '5.1.18'
 [dependencies]
 jsonrpc-core = '18.0.0'
 structopt = '0.3.8'
-social-media-query-runtime-api = { path = '../pallets/social_media/runtime-api', version = '0.0.1' }
-social-media-query = { path = '../pallets/social_media/rpc', version = '0.0.1' }
-futures = '0.3.18'
-sc-consensus-manual-seal = { git = 'https://github.com/paritytech/substrate.git', tag = 'monthly-2021-11-1', version = '0.10.0-dev' }
 
 [dependencies.node-template-runtime]
 path = '../runtime'

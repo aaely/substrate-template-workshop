@@ -25,7 +25,7 @@ pub mod pallet {
 		email: Vec<u8>,
 		email_id: u128,
 		pub handle: Vec<u8>,
-		handle_id: u128,
+		pub handle_id: u128,
 		bio: Vec<u8>,
 		website: Vec<u8>,
 		profile_image: Vec<u8>,
@@ -134,7 +134,7 @@ pub mod pallet {
 				ensure!(!Self::check_duplicate_user(&who), Error::<T>::UserAlreadyExists);
 				ensure!(!Self::get_user_handle_availability(&handle_id), Error::<T>::HandleAlreadyExists);
 				ensure!(!Self::get_user_email_availability(&email_id), Error::<T>::EmailAlreadyInUse);
-				let count = UserCount::<T>::get().unwrap_or(0);
+				let count = Self::get_user_count();
 				Self::register_user(&who);
 				Users::<T>::insert(who.clone(), User {
 					address: who.clone(),

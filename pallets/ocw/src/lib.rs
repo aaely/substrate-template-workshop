@@ -287,6 +287,10 @@ pub mod pallet {
 		/// Event generated when new price is accepted to contribute to the average.
 		/// \[price, who\]
 		NewPrice(u32, T::AccountId),
+		BTCPrice(u32),
+		ETHPrice(u32),
+		DOTPrice(u32),
+		ATOMPrice(u32),
 	}
 
 	#[pallet::validate_unsigned]
@@ -325,22 +329,6 @@ pub mod pallet {
 	#[pallet::storage]
 	#[pallet::getter(fn prices)]
 	pub(super) type Prices<T: Config> = StorageValue<_, Vec<u32>, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn btc)]
-	pub(super) type BTCPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn eth)]
-	pub(super) type ETHPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn dot)]
-	pub(super) type DOTPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
-
-	#[pallet::storage]
-	#[pallet::getter(fn atom)]
-	pub(super) type ATOMPrice<T: Config> = StorageValue<_, u32, ValueQuery>;
 
 	/// Defines the block when next unsigned transaction will be accepted.
 	///
@@ -665,11 +653,6 @@ impl<T: Config> Pallet<T> {
 			http::Error::Unknown
 		})?;
 
-		log::info!("BTC_price: {}", body_str_btc);
-		log::info!("ETH_price: {}", body_str_eth);
-		log::info!("DOT_price: {}", body_str_dot);
-		log::info!("ATOM_price: {}", body_str_atom);
-
 		let price_btc = match Self::parse_price(body_str_btc) {
 			Some(price) => Ok(price),
 			None => {
@@ -698,6 +681,12 @@ impl<T: Config> Pallet<T> {
 				Err(http::Error::Unknown)
 			},
 		}?;
+
+
+		Self::deposit_event(Event::BTCPrice(price_btc));
+		Self::deposit_event(Event::ETHPrice(price_eth));
+		Self::deposit_event(Event::DOTPrice(price_dot));
+		Self::deposit_event(Event::ATOMPrice(price_atom));
 
 		log::info!("Got BTCprice: {}, ETHprice: {}, DOTprice: {}, ATOMprice: {}", price_btc, price_eth, price_dot, price_atom);
 		let prices: Vec<(u32, PriceType)> = vec![(price_btc, PriceType::BTC), (price_eth, PriceType::ETH), (price_dot, PriceType::DOT), (price_atom, PriceType::ATOM)];
@@ -738,11 +727,11 @@ impl<T: Config> Pallet<T> {
 							_prices[prices[0].0 as usize % MAX_LEN] = price.0;
 						}
 					});
-					<BTCPrice<T>>::put(price.0);
+					Self::deposit_event(Event::BTCPrice(price.0));
 				},
-				PriceType::ETH => <ETHPrice<T>>::put(price.0),
-				PriceType::DOT => <DOTPrice<T>>::put(price.0),
-				PriceType::ATOM => <ATOMPrice<T>>::put(price.0),
+				PriceType::ETH => Self::deposit_event(Event::ETHPrice(price.0)),
+				PriceType::DOT => Self::deposit_event(Event::DOTPrice(price.0)),
+				PriceType::ATOM => Self::deposit_event(Event::ETHPrice(price.0)),
 			}
 		}
 

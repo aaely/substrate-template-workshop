@@ -47,11 +47,6 @@ default-features = false
 path = '../pallets/users'
 version = '0.0.1'
 
-[dependencies.social-media-query-runtime-api]
-default-features = false
-path = '../pallets/social_media/runtime-api'
-version = '0.0.1'
-
 [build-dependencies.substrate-wasm-builder]
 git = 'https://github.com/paritytech/substrate.git'
 tag = 'monthly-2021-11-1'
@@ -264,7 +259,6 @@ std = [
     'pallet-timestamp/std',
     'pallet-transaction-payment-rpc-runtime-api/std',
     'pallet-transaction-payment/std',
-    'social-media-query-runtime-api/std',
     'sp-api/std',
     'sp-block-builder/std',
     'sp-consensus-aura/std',

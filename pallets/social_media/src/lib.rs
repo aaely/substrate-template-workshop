@@ -25,7 +25,6 @@ pub mod pallet {
 		handle_tags: Vec<u128>,
 		hashtags: Vec<u128>,
 		content: Vec<u8>,
-		comments: Vec<u128>,
 		total_comments: u32,
 		images: Vec<Vec<u8>>,
 	}
@@ -192,7 +191,6 @@ pub mod pallet {
 				handle_tags,
 				hashtags: hashtags.clone(),
 				content,
-				comments: Vec::new(),
 				total_comments: 0,
 				images,
 			});
@@ -451,7 +449,7 @@ pub mod pallet {
 			post: &Post<T::AccountId>
 		) {
 			for h in ht {
-				let mut ht_post_count = HashtagPostCount::<T>::get(h).unwrap_or(0);
+				let ht_post_count = HashtagPostCount::<T>::get(h).unwrap_or(0);
 				let ht_post_position = HashtagPostsByIdCount::<T>::get(h, post.id);
 				HashtagPostByCount::<T>::insert(h, ht_post_position, post);
 				HashtagPostsByIdCount::<T>::insert(h, post.id, ht_post_position);
@@ -470,7 +468,6 @@ pub mod pallet {
 			PostCommentByCount::<T>::insert(post_id, index.clone(), comment);
 			UserPostByCount::<T>::insert(post_author, index, post.clone());
 			PostById::<T>::insert(post_id, post);
-			
 		}
 
 		fn add_to_user_posts(
@@ -535,13 +532,14 @@ pub mod pallet {
 		}
 
 		fn get_three_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
-			let accounts: Vec<(Vec<u8>, u128)>;
-			let _count = pallet_users::Pallet::<T>::get_user_count().unwrap_or(0);
+			let mut accounts: Vec<(Vec<u8>, u128)> = Vec::new();
+			let _count = pallet_users::Pallet::<T>::get_user_count();
 			let mut i: u128 = 0;
 			while accounts.len() < 3 && i <= _count {
-				let _user = <pallet_users::Pallet<T> as Trait>::UserByCounterByCount::get(i);
-				if _user.handle.starts_with(name) {
-					accounts.push(_user);
+				let _user = pallet_users::Pallet::<T>::get_user_by_count(i);
+				if _user.handle.starts_with(&name) {
+					let u = (_user.handle, _user.handle_id);
+					accounts.push(u);
 				}
 				i += 1;
 			}
@@ -549,13 +547,14 @@ pub mod pallet {
 		}
 	
 		fn get_fifty_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
-			let accounts: Vec<(Vec<u8>, u128)>;
-			let _count = pallet_users::Pallet::<T>::get_user_count().unwrap_or(0);
+			let mut accounts: Vec<(Vec<u8>, u128)> = Vec::new();
+			let _count = pallet_users::Pallet::<T>::get_user_count();
 			let mut i: u128 = 0;
 			while accounts.len() < 50 && i <= _count { 
-				let _user = <pallet_users::Pallet<T> as Trait>::UserByCount::get(i);
-				if _user.handle.starts_with(name) {
-					accounts.push(_user);
+				let _user = pallet_users::Pallet::<T>::get_user_by_count(i);
+				if _user.handle.starts_with(&name) {
+					let u = (_user.handle, _user.handle_id);
+					accounts.push(u);
 				}
 				i += 1;
 			}
