@@ -42,14 +42,14 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type Orders<T: Config> = StorageMap<_, Twox64Concat, u128, Order<T::AccountId>>;
 
+	/// Grabs all orders by a particular user. TODO:: Make iterable.
 	#[pallet::storage]
 	pub type OrdersByUser<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, Vec<Order<T::AccountId>>>;
 
 	#[pallet::storage]
 	pub (super) type OrderCount<T> = StorageValue<_, u128>;
 
-	// Pallets use events to inform users when important changes are made.
-	// https://docs.substrate.io/v3/runtime/events
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -72,8 +72,8 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+		/// Exposed extrinsic that creates an invoice of the supplied products/items
+		/// and initiates a transfer from the purchaser to the designated account
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn purchase(
 			origin: OriginFor<T>, 

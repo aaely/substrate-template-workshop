@@ -53,21 +53,28 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// [author_account, author_post_count, Post]
+	/// [author_account, author_post_count, Post]
+	/// keeps track of posts by sequential order for a specific user, serves as an iterator
+	/// side note is trying to use IterableStorageDoubleMap results in import errors and
+	/// is not available to use in a way I have discovered as of yet
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_post_by_count)]
 	pub(super) type UserPostByCount<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, u32, Post<T::AccountId>, ValueQuery>;
 
+	/// sequential ordering of all posts. General method to grab a single post.
 	#[pallet::storage]
 	#[pallet::getter(fn get_post_by_id)]
 	pub(super) type PostById<T: Config> = StorageMap<_, Twox64Concat, u128, Post<T::AccountId>, ValueQuery>;
 
-	//[author_account, post_id, author_post_count]
+	/// Gets the position iterator value for a users post by id. Generally used to quick lookup the
+	/// index position of a particular post by a particular author to prevent long iteration searches
+	/// [author_account, post_id, author_post_count]
 	#[pallet::storage]
 	#[pallet::getter(fn get_author_post_position)]
 	pub(super) type UserPostPosition<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId ,Twox64Concat, u128, u32, ValueQuery>;
 	
-	//[comment_id, Comment]
+	/// Sequential ordering of all comments. General method to grab a single post.
+	/// [comment_id, Comment]
 	#[pallet::storage]
 	#[pallet::getter(fn get_comment_by_id)]
 	pub(super) type CommentById<T: Config> = StorageMap<_, Twox64Concat, u128, Comment<T::AccountId>, ValueQuery>;
@@ -75,28 +82,42 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type CommentsCount<T> = StorageValue<_, u128>;
 
-	//[post_id, post_comment_position, comment]
+	///	Gets a comment by the particular positional iterator value for a particular post.
+	/// Generally used to get a few comments for any particular post.
+	/// [post_id, post_comment_position, comment]
 	#[pallet::storage]
 	#[pallet::getter(fn get_post_comment_by_count)]
 	pub(super) type PostCommentByCount<T:Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, u32, Comment<T::AccountId>, ValueQuery>;
 
-	//[post_id, comment_id, post_comment_position]
+	///	Gets the position iterator value for a comment for a particular post. Generall used to quick
+	/// lookup the index position of a particular comment for a particular post.
+	/// [post_id, comment_id, post_comment_position]
 	#[pallet::storage]
 	#[pallet::getter(fn get_post_comment_position)]
 	pub(super) type PostCommentPosition<T:Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, u128, u32, ValueQuery>;
 
+	/// Gets the current following of a particular user. 
+	/// TODO:: Refactor into iterable variation to avoid memory overload of front end.
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_following)]
 	pub(super) type Following<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, u128, Vec<T::AccountId>, ValueQuery>;
 
+	/// Gets the boolean value for whether or not a user is following another user.\
+	/// Used to trigger conditional renders on front end, whether or not a user will
+	/// be able to tag, message, etc.
 	#[pallet::storage]
 	#[pallet::getter(fn is_user_following)]
 	pub(super) type IsFollowing<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
+	/// Gets the users a particular user is following
+	/// TODO:: Refactor into iterable variation to avoid memory overload of front end.
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_followers)]
 	pub(super) type Followers<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, u128, Vec<T::AccountId>, ValueQuery>;
 
+	/// Gets the boolean value for whether or not a user is following another user.\
+	/// Used to trigger conditional renders on front end, whether or not a user will
+	/// be able to tag, message, etc.
 	#[pallet::storage]
 	#[pallet::getter(fn is_user_follower)]
 	pub(super) type IsFollower<T: Config> = StorageDoubleMap<_, Twox64Concat, T::AccountId, Twox64Concat, T::AccountId, bool, ValueQuery>;
@@ -104,35 +125,43 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type PostCount<T: Config> = StorageValue<_, u128>;
 
+	/// Used for conditional renders on front end.
+	/// [post_id, AccountId] -> post to check, user to check against
 	#[pallet::storage]
 	#[pallet::getter(fn post_has_user_liked)]
-	//post_id -> u128 || user_who_liked -> T::AccountId
 	pub(super) type HasLikedPost<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
+	/// Used for conditional renders on front end.
+	/// [comment_id, AccountId] -> comment to check, user to check against
 	#[pallet::storage]
 	#[pallet::getter(fn comment_has_user_liked)]
-	//comment_id -> u128 || user_who_liked -> T::AccountId
 	pub(super) type HasLikedComment<T: Config> = StorageDoubleMap<_, Twox64Concat, u128, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
-	//[hashtag_id, hashtag_post_count, Post]
+	///[hashtag_id, hashtag_post_count, Post]
 	#[pallet::storage]
 	#[pallet::getter(fn get_post_by_hashtag_id)]
 	pub(super) type HashtagPostByCount<T: Config> = StorageDoubleMap<_, Twox64Concat ,u128, Twox64Concat, u32, Post<T::AccountId>, ValueQuery>;
 
-	//[hashtag_id, post_id, hashtag_post_count]
+	/// Gets count of posts with a particular hashtag, planned use is grabbing a
+	/// single post by hashtag for the iterable grabbing of tagged posts.
+	/// [hashtag_id, post_id, hashtag_post_count]
 	#[pallet::storage]
 	#[pallet::getter(fn get_hashtag_post_position)]
 	pub(super) type HashtagPostsByIdCount<T: Config> = StorageDoubleMap<_, Twox64Concat ,u128, Twox64Concat, u128, u32, ValueQuery>;
 
-	//[hashtag_id, count_of_hashtag_posts]
+	///[hashtag_id, count_of_hashtag_posts]
 	#[pallet::storage]
 	pub type HashtagPostCount<T: Config> = StorageMap<_, Twox64Concat, u128, u32>;
 
+	/// Used to quick lookup handles and accountIds that have like a particular post
+	/// TODO:: make iterable to avoid memory overload on front end
 	#[pallet::storage]
 	#[pallet::getter(fn post_liked_by)]
-	//post_id -> u128 || user_who_liked -> T::AccountId
+	///post_id -> u128 || user_who_liked -> T::AccountId
 	pub(super) type PostLikedBy<T: Config> = StorageMap<_, Twox64Concat, u128, Vec<(Vec<u8>, T::AccountId)>, ValueQuery>;
 
+	/// Used to quick lookup handles and accountIds that have like a particular comment
+	/// TODO:: make iterable to avoid memory overload on front end
 	#[pallet::storage]
 	#[pallet::getter(fn comment_liked_by)]
 	//comment_id -> u128 || user_who_liked -> T::AccountId
@@ -172,6 +201,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// An example dispatchable that takes a singles value as a parameter, writes the value to
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+		/// Exposed extrinsic used to create a new post.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn new_post(
 			origin: OriginFor<T>,
@@ -202,6 +232,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Exposed extrinsic used to remove a post. Must be initiated and signed by author
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn remove_post(
 			origin: OriginFor<T>,
@@ -215,6 +246,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Exposed extrinsic to create a new comment.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn new_comment(
 			origin: OriginFor<T>,
@@ -240,6 +272,7 @@ pub mod pallet {
 			Ok(())
 		}
 
+		/// Exposed extrinsic used to remove a comment. Must be initiated and signed by author
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(3,3))]
 		pub fn remove_comment(
 			origin: OriginFor<T>,
@@ -354,6 +387,8 @@ pub mod pallet {
 
 	impl<T: Config> Pallet<T> {
 
+		/// Adds accountId and handle to the storage of users that have liked a 
+		/// particular post.
 		fn post_liked(
 			user_liked: &T::AccountId, 
 			post_id: &u128, 
@@ -365,6 +400,8 @@ pub mod pallet {
 			HasLikedPost::<T>::insert(post_id, user_liked, true);
 		}
 
+		/// Removes a particular accountId and handle from the storage of users
+		/// that have liked a particular post.
 		fn post_unliked_by(
 			user_liked: &T::AccountId, 
 			post_id: &u128, 
@@ -376,6 +413,8 @@ pub mod pallet {
 			HasLikedPost::<T>::insert(post_id, user_liked, false);
 		}		
 
+		/// Adds accountId and handle to the storage of users that have liked a 
+		/// particular comment.
 		fn comment_liked(
 			user_liked: &T::AccountId, 
 			comment_id: &u128,
@@ -387,6 +426,8 @@ pub mod pallet {
 			HasLikedComment::<T>::insert(comment_id, user_liked, true);
 		}
 
+		/// Removes a particular accountId and handle from the storage of users
+		/// that have liked a particular comment.
 		fn comment_unliked_by(
 			user_unliked: &T::AccountId,
 			comment_id: &u128,
@@ -444,6 +485,8 @@ pub mod pallet {
 			Following::<T>::insert(user_initiating_follow, user_initiating_follow_handle_id, following);
 		}
 
+		/// Method to handle adding a new post to the hashtags added to it.
+		/// TODO:: refactor to insert into map in iterable fashion.
 		fn add_to_hashtag_posts(
 			ht: &Vec<u128>,
 			post: &Post<T::AccountId>
@@ -457,6 +500,10 @@ pub mod pallet {
 			}
 		}
 
+		/// Method to add a comment to a post. Gets post, finds the index of the post
+		/// with respect to the post author, increments the total_comments tracker,
+		/// then updates the post with respect to all the storage values associated
+		/// with the particular post.
 		fn add_to_post_comments(
 			post_id: &u128, 
 			comment: &Comment<T::AccountId>, 
@@ -470,6 +517,9 @@ pub mod pallet {
 			PostById::<T>::insert(post_id, post);
 		}
 
+		/// Mehtod to add a new post for a user. Gets the user, increments the
+		/// the total_posts tracker for the user, adds the post to the users
+		/// personal post storage, then updates the user in storage.
 		fn add_to_user_posts(
 			post: &Post<T::AccountId>, 
 			user: &T::AccountId
@@ -531,26 +581,13 @@ pub mod pallet {
 			}
 		}
 
+		/// Planned use is to expose this method with custom RPC to suggest 3 handles for 
+		/// when a user is typing a handle to search on the front end.
 		fn get_three_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
 			let mut accounts: Vec<(Vec<u8>, u128)> = Vec::new();
 			let _count = pallet_users::Pallet::<T>::get_user_count();
 			let mut i: u128 = 0;
 			while accounts.len() < 3 && i <= _count {
-				let _user = pallet_users::Pallet::<T>::get_user_by_count(i);
-				if _user.handle.starts_with(&name) {
-					let u = (_user.handle, _user.handle_id);
-					accounts.push(u);
-				}
-				i += 1;
-			}
-			Ok(accounts)
-		}
-	
-		fn get_fifty_accts(name: Vec<u8>) -> Result<Vec<(Vec<u8>, u128)>, ()> {
-			let mut accounts: Vec<(Vec<u8>, u128)> = Vec::new();
-			let _count = pallet_users::Pallet::<T>::get_user_count();
-			let mut i: u128 = 0;
-			while accounts.len() < 50 && i <= _count { 
 				let _user = pallet_users::Pallet::<T>::get_user_by_count(i);
 				if _user.handle.starts_with(&name) {
 					let u = (_user.handle, _user.handle_id);

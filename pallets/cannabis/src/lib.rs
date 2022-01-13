@@ -140,8 +140,7 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+		/// Exposed extrinsic for creating a new cannabis product. 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,2))]
 		pub fn new_cannabis_product(
 			origin: OriginFor<T>, 
@@ -249,6 +248,8 @@ pub mod pallet {
 			CannabinoidByCount::<T>::insert(count, cannabinoid);
 		}
 
+		/// Helper method to add a particular product to a particular terpene
+		/// Used to quickly sort based on product terpene concentration
 		fn add_product_to_terpene(id: &u128, terpenes: &Vec<(u128, Vec<u8>, u32)>) {
 			for t in terpenes {
 				let mut terp = Terpenes::<T>::get(t.0).unwrap_or(Default::default());
@@ -257,6 +258,8 @@ pub mod pallet {
 			}
 		}
 
+		/// Helper method to add a particular product to a particular cannabinoid
+		/// Used to quickly sort based on product cannabinoid concentration
 		fn add_product_to_cannabinoid(id: &u128, cannabinoids: &Vec<(u128, Vec<u8>, u32)>) {
 			for c in cannabinoids {
 				let mut cann = Cannabinoids::<T>::get(c.0).unwrap_or(Default::default());

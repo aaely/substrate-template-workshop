@@ -50,12 +50,12 @@ pub mod pallet {
 
 	// The pallet's runtime storage items.
 	// https://substrate.dev/docs/en/knowledgebase/runtime/storage
+	/// Gets a peptide stored by sequential u128 id
 	#[pallet::storage]
 	#[pallet::getter(fn get_peptide)]
-	// Learn more about declaring storage items:
-	// https://substrate.dev/docs/en/knowledgebase/runtime/storage#declaring-storage-items
 	pub(super) type Peptides<T: Config> = StorageMap<_, Twox64Concat, u128, (Peptide<T::AccountId>, PeptideProfile<AminoAcid>), ValueQuery>;
 
+	/// Gets an amino acid stored by sequential u128 id
 	#[pallet::storage]
 	#[pallet::getter(fn get_amino)]
 	pub(super) type AminoAcids<T> = StorageMap<_, Twox64Concat, u128, AminoAcid, ValueQuery>;
@@ -79,7 +79,8 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		NewAmino(u32, T::AccountId),
+		NewAmino(AminoAcid),
+		NewPeptide((Peptide<T::AccountId>, PeptideProfile<AminoAcid>)),
 	}
 
 	// Errors inform users that something went wrong.
@@ -100,8 +101,8 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
+
+		/// Exposed extrinsic use to create a new peptide. Prevents duplicated from being added.
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,2))]
 		pub fn create_peptide(
 			origin: OriginFor<T>, 
@@ -111,9 +112,6 @@ pub mod pallet {
 			inventory: u32, 
 			image_hash: Vec<u8>,
 			chain: Vec<AminoAcid>) -> DispatchResult {
-				// Check that the extrinsic was signed and get the signer.
-				// This function will return an error if the extrinsic is not signed.
-				// https://substrate.dev/docs/en/knowledgebase/runtime/origin
 				let who = ensure_signed(origin)?;
 				ensure!(!Self::check_duplicate_peptide(&id), Error::<T>::ItemAlreadyExists);
 				let count = PeptideCount::<T>::get().unwrap_or(0);
@@ -135,11 +133,12 @@ pub mod pallet {
 				}));
 				let peptide = Peptides::<T>::get(id);
 				Self::add_peptide_by_count(&count, &peptide);
-				//Self::deposit_event(Event::NewPeptide(&count, &who));
+				Self::deposit_event(Event::NewPeptide(peptide));
 				PeptideCount::<T>::put(count + 1);				
 				Ok(())
 			}
 
+		/// Exposed extrinsic used to create a new amino acid. 
 		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,3))]
 		pub fn create_amino(
 			origin: OriginFor<T>, 
@@ -156,7 +155,7 @@ pub mod pallet {
 				});
 				let amino = AminoAcids::<T>::get(id);
 				Self::add_amino_by_count(&count, &amino);
-				Self::deposit_event(Event::NewAmino(count, who));
+				Self::deposit_event(Event::NewAmino(amino));
 				AminoAcidCount::<T>::put(count + 1);
 				Ok(())
 			}
@@ -197,6 +196,9 @@ pub mod pallet {
 		}
 
 		fn production_cost_calc(amino_chain: &Vec<AminoAcid>) -> (u32, u32) {
+			///
+			/// I had entirely too many issues with .pow() so I ended up doing this instead
+			/// calculates the theoretic yield of the supplied amino chain
 			let mut total: u32 = 0;
 			let mut yld: f64 = 0.97;
 			for amino in amino_chain {

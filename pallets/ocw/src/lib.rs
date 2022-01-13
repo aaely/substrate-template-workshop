@@ -577,7 +577,7 @@ impl<T: Config> Pallet<T> {
 		// deadline to 2s to complete the external call.
 		// You can also wait idefinitely for the response, however you may still get a timeout
 		// coming from the host machine.
-		let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(2_000));
+		let deadline = sp_io::offchain::timestamp().add(Duration::from_millis(1_000));
 		// Initiate an external HTTP GET request.
 		// This is using high-level wrappers from `sp_runtime`, for the low-level calls that
 		// you can find in `sp_io`. The API is trying to be similar to `reqwest`, but
@@ -683,10 +683,10 @@ impl<T: Config> Pallet<T> {
 		}?;
 
 
-		Self::deposit_event(Event::BTCPrice(price_btc));
-		Self::deposit_event(Event::ETHPrice(price_eth));
-		Self::deposit_event(Event::DOTPrice(price_dot));
-		Self::deposit_event(Event::ATOMPrice(price_atom));
+		///Self::deposit_event(Event::BTCPrice(price_btc));
+		///Self::deposit_event(Event::ETHPrice(price_eth));
+		///Self::deposit_event(Event::DOTPrice(price_dot));
+		///Self::deposit_event(Event::ATOMPrice(price_atom));
 
 		log::info!("Got BTCprice: {}, ETHprice: {}, DOTprice: {}, ATOMprice: {}", price_btc, price_eth, price_dot, price_atom);
 		let prices: Vec<(u32, PriceType)> = vec![(price_btc, PriceType::BTC), (price_eth, PriceType::ETH), (price_dot, PriceType::DOT), (price_atom, PriceType::ATOM)];

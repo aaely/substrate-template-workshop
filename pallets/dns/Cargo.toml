@@ -4,7 +4,7 @@ description = 'FRAME pallet template for defining custom runtime logic.'
 edition = '2018'
 homepage = 'https://substrate.dev'
 license = 'Unlicense'
-name = 'pallet-cannabis'
+name = 'pallet-dns'
 publish = false
 readme = 'README.md'
 repository = 'https://github.com/substrate-developer-hub/substrate-node-template/'
@@ -28,7 +28,6 @@ serde = { version = "1.0.119" }
 sp-core = { git = "https://github.com/paritytech/substrate", default-features = false, tag = 'monthly-2021-12', version = "4.0.0-dev" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", default-features = false, tag = 'monthly-2021-12', version = "4.0.0-dev" }
 sp-io = { git = "https://github.com/paritytech/substrate", default-features = false, tag = 'monthly-2021-12', version = "4.0.0-dev" }
-
 
 [features]
 default = ['std']

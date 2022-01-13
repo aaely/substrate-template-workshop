@@ -44,45 +44,59 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
 
-	// The pallet's runtime storage items.
-	// https://docs.substrate.io/v3/runtime/storage
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_count)]
 	pub(super) type UserCount<T> = StorageValue<_, u128, ValueQuery>;
 
+	/// Permission flag. Used to trigger conditional renders in front end,
+	/// and prevent certain actions from being executed on chain.
 	#[pallet::storage]
 	#[pallet::getter(fn get_admin)]
 	pub(super) type Admins<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
+	/// Permission flag. Used to trigger conditional renders in front end,
+	/// and prevent certain actions from being executed on chain.
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_access)]
 	pub(super) type UserAccess<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, bool, ValueQuery>;
 
+	/// Returns a user account struct by supplied AccountId
 	#[pallet::storage]
 	#[pallet::getter(fn get_user)]
 	pub(super) type Users<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, User<T::AccountId>, ValueQuery>;
 
+	/// Returns a user account by sequential u128 id
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_by_count)]
 	pub(super) type UserByCount<T: Config> = StorageMap<_, Twox64Concat, u128, User<T::AccountId>, ValueQuery>;
 
+	/// Returns a user account by supplied u128 handle id
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_by_handle)]
 	pub(super) type UserByHandle<T: Config> = StorageMap<_, Twox64Concat, u128, User<T::AccountId>, ValueQuery>;
 
+	/// General account used to collect revenue from payment transactions
 	#[pallet::storage]
 	#[pallet::getter(fn get_owner)]
 	pub(super) type Owner<T: Config> = StorageValue<_, T::AccountId>;
 
+	/// Flag to check if a particular handle is in use or not
+	/// Prevents duplicates and used as a flag for conditional renders
+	/// on the front end.
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_handle_availability)]
 	pub(super) type UserHandleAvailability<T> = StorageMap<_, Twox64Concat, u128, bool, ValueQuery>;
 
+	/// Flag to check if a particular email is in use or not
+	/// Prevents duplicates and used as a flag for conditional renders
+	/// on the front end.
 	#[pallet::storage]
 	#[pallet::getter(fn get_user_email_availability)]
 	pub(super) type UserEmailAvailability<T> = StorageMap<_, Twox64Concat, u128, bool, ValueQuery>;
 
 
+	/// used to grab name and profile image for quick reference
+	/// on posts and comments for the front end.
 	#[pallet::storage]
 	#[pallet::getter(fn profile_image_by_account)]
 	pub(super) type ProfileImageByAccount<T: Config> = StorageMap<_, Twox64Concat, T::AccountId, (Vec<u8>, Vec<u8>), ValueQuery>;

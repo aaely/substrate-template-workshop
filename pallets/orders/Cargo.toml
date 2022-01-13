@@ -13,22 +13,22 @@ version = '0.0.1'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-[dependencies.sp-core]
+[dev-dependencies.sp-core]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
-[dependencies.sp-io]
+[dev-dependencies.sp-io]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.sp-runtime]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.pallet-users]
@@ -52,41 +52,51 @@ features = ['derive']
 package = 'parity-scale-codec'
 version = '2.0.0'
 
+[dependencies.lite-json]
+default-features = false
+package = 'lite-json'
+version = '0.1'
+
+[dependencies.log]
+default-features = false
+package = 'log'
+version = '0.4.14'
+
 [dependencies.frame-benchmarking]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
 optional = true
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.frame-support]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.frame-system]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.pallet-timestamp]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.pallet-balances]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.sp-std]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
-tag = 'monthly-2021-11-1'
+tag = 'monthly-2021-12'
 version = '4.0.0-dev'
 
 [dependencies.scale-info]
@@ -104,9 +114,10 @@ std = [
     'frame-system/std',
     'frame-benchmarking/std',
     'pallet-timestamp/std',
-    'sp-core/std',
-    'sp-runtime/std',
+    'lite-json/std',
+    'log/std',
     'sp-std/std',
+    'sp-runtime/std',
     'pallet-users/std',
     'pallet-cannabis/std',
     'pallet-balances/std',
