@@ -9,7 +9,7 @@ pub use pallet::*;
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+	use frame_system::{pallet_prelude::*, ensure_signed};
 	use codec::{Encode, Decode};
 	use sp_std::prelude::*;
 
@@ -19,6 +19,9 @@ pub mod pallet {
 		original_creator: AccountId,
 		owner: AccountId,
 		ip_addresses: Vec<Vec<u8>>,
+		last_price: u32,
+		current_price: u32,
+		for_sale: bool,
 	}
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
@@ -60,11 +63,13 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
+		#[pallet::weight(10_000 + T::DbWeight::get().writes(3))]
 		pub fn register_name(
 			origin: OriginFor<T>, 
 			id: u128,
 			ip: Vec<Vec<u8>>,
+			last_price: u32,
+			for_sale: bool,
 		) -> DispatchResult {
 			let signer = ensure_signed(origin)?;
 			ensure!(!Self::check_duplicate(&id), Error::<T>::AlreadyInUse);
@@ -73,6 +78,9 @@ pub mod pallet {
 				original_creator: signer.clone(),
 				owner: signer.clone(),
 				ip_addresses: ip,
+				last_price,
+				current_price: 0,
+				for_sale
 			});
 			let record = Self::record_by_id(id);
 			Self::add_record(record, &signer);
@@ -89,13 +97,25 @@ pub mod pallet {
 			Self::transfer_record_ownership(&id, &signer);
 			Ok(())
 		}
+
+		#[pallet::weight(0)]
+		pub fn update_for_sale(
+			origin: OriginFor<T>,
+			id: u128,
+		) -> DispatchResult {
+			let signer = ensure_signed(origin)?;
+			let mut record = Self::record_by_id(id.clone());
+			record.for_sale = !record.for_sale;
+			Self::update_record(&record, &id, &signer);
+			Ok(())
+		}
 	}
 
 	impl<T: Config> Pallet<T> {
 		// Helper Fucntions
 		fn check_duplicate(id: &u128) -> bool {
 				Self::is_exist(id)
-			}
+		}
 
 		fn add_record(
 			record: Record<T::AccountId>, 
@@ -119,6 +139,13 @@ pub mod pallet {
 			new_owner_records.push(record.clone());
 			RecordsByOwner::<T>::insert(new_owner, new_owner_records);
 			RecordById::<T>::insert(id, record);
+		}
+
+		fn update_record(record: &Record<T::AccountId>, id: &u128, signer: &T::AccountId) {
+			RecordById::<T>::insert(id, record);
+			let mut records = Self::records_by_owner(signer);
+			records.push(record.clone());
+			RecordsByOwner::<T>::insert(signer, records);
 		}
 	}
 }
